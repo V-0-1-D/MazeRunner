@@ -37,11 +37,13 @@ slow_speed = 25
 fast_speed = 75
 
 # [low, high]
-black_interval = [0, 200] #
-red_interval = [] # goal
-yellow_interval = [] 
-green_interval = [] # used for fast line-following
-white_interval = [1300, 1500] # used for default driving surface
+black_interval = [200, 400] # Used for default speed line following
+red_interval = [1300, 1499] # goal
+yellow_interval = [1700, 1999] # used for slow line-following
+green_interval = [1100, 1400] # used for fast line-following
+white_interval = [2000, 2100] # used for default driving surface
+orange_interval = [1500, 1699]
+purple_interval = [500, 700]
 
 
 '''
