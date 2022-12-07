@@ -13,28 +13,32 @@ Modified:
 
 '''
 
-from spike import ColorSensor, PrimeHub, LightMatrix, Motor, DistanceSensor
+from spike import ColorSensor, PrimeHub, LightMatrix, Motor, MotorPair, DistanceSensor
+from spike.control import wait_for_seconds
+from math import pi, ceil
 
 '''
 Initialize module-level variable.
 Pins are subject to change.
 '''
+WHEEL_RADIUS = 3 # cm
+WALL_DISTANCE = 10 # cm
+SLOW_SPEED = 25
+FAST_SPEED = 75
+
 hub = PrimeHub()
 lm = LightMatrix()
-
 right_distance_sensor = DistanceSensor('A')
 forward_distance_sensor = DistanceSensor('B')
-
 left_color_sensor = ColorSensor('F')
 right_color_sensor = ColorSensor('E')
-
+mp = MotorPair('C', 'D')
 left_motor = Motor('C')
-left_motor.set_default_speed(-50)
 right_motor = Motor('D')
+
+left_motor.set_default_speed(-50)
 right_motor.set_default_speed(50)
 
-slow_speed = 25
-fast_speed = 75
 
 # [low, high]
 black_interval = [200, 400] # Used for default speed line following
@@ -120,7 +124,7 @@ def line_follow():
             in_interval(right_magnitude, white_interval)
         ):
             left_motor.start(0)
-            right_motor.start(slow_speed)
+            right_motor.start(SLOW_SPEED)
 
         # fast line on left
         elif (
@@ -128,7 +132,7 @@ def line_follow():
             in_interval(right_magnitude, white_interval)
         ):
             left_motor.start(0)
-            right_motor.start(fast_speed)
+            right_motor.start(FAST_SPEED)
         
         # slow line on right
         elif (
@@ -136,7 +140,7 @@ def line_follow():
             in_interval(right_magnitude, purple_interval)
         ):
             # check line speed color on right sensor
-            left_motor.start(slow_speed)
+            left_motor.start(SLOW_SPEED)
             right_motor.start(0)
 
         # fast line on right
@@ -145,7 +149,7 @@ def line_follow():
             in_interval(right_magnitude, green_interval)
         ):
             # check line speed color on right sensor
-            left_motor.start(fast_speed)
+            left_motor.start(FAST_SPEED)
             right_motor.start(0)
 
         # slow line on both sides
@@ -153,16 +157,16 @@ def line_follow():
             in_interval(left_magnitude, purple_interval) and 
             in_interval(right_magnitude, purple_interval)
         ):
-            left_motor.start(slow_speed)
-            right_motor.start(slow_speed)
+            left_motor.start(SLOW_SPEED)
+            right_motor.start(SLOW_SPEED)
 
         # fast line on both sides
         elif (
             in_interval(left_magnitude, green_interval) and 
             in_interval(right_magnitude, green_interval)
         ):
-            left_motor.start(fast_speed)
-            right_motor.start(fast_speed)
+            left_motor.start(FAST_SPEED)
+            right_motor.start(FAST_SPEED)
 
         # no lines
         else:
@@ -209,6 +213,59 @@ def test_rgbi_reading():
     hub.speaker.beep(60, 0.5)
 
 '''
+exists_right_corner()
+
+Jeremy Juckett,
+'''
+def exists_right_corner():
+    right_distance = right_distance_sensor.get_distance_cm()
+
+    # if there is a wall to the immediate right, then there is no corner
+    if not right_distance is None and right_distance <= WALL_DISTANCE:
+        return False
+    
+    # move ahead a bit to avoid rotating into a wall
+    left_motor.start(-50)
+    right_motor.start(50)
+    wait_for_seconds(0.5)
+    left_motor.stop()
+    right_motor.stop()
+
+    # rotate -90 degrees
+    mp.move_tank(amount=(pi * WHEEL_RADIUS), unit='cm', left_speed=50, right_speed=-50)
+    wait_for_seconds(0.5)
+
+    # move a head a bit
+    left_motor.start(-50)
+    right_motor.start(50)
+    wait_for_seconds(0.5)
+    left_motor.stop()
+    right_motor.stop()
+    wait_for_seconds(0.5)
+
+    # scan for a wall on the right, returning True if a wall exists
+    right_distance = right_distance_sensor.get_distance_cm()
+    if not right_distance is None and right_distance <= WALL_DISTANCE:
+        return True
+    
+    # undo the previous motions if there is no wall, return False
+    left_motor.start(50)
+    right_motor.start(-50)
+    wait_for_seconds(0.5)
+    left_motor.stop()
+    right_motor.stop()
+
+    mp.move_tank(amount=(pi * WHEEL_RADIUS), unit='cm', left_speed=-50, right_speed=50)
+
+    left_motor.start(50)
+    right_motor.start(-50)
+    wait_for_seconds(0.5)
+    left_motor.stop()
+    right_motor.stop()
+
+    return False
+
+'''
 wall_follow()
 
 Jeremy Juckett,
@@ -217,29 +274,50 @@ def wall_follow():
     heading = None
     loop = True
     while loop:
-        left_magnitude = magnitude(left_color_sensor.get_rgb_intensity())
-        right_magnitude = magnitude(right_color_sensor.get_rgb_intensity())
-        right_distance = None
-        forward_distance = None
+        left_color_magnitude = magnitude(left_color_sensor.get_rgb_intensity())
+        right_color_magnitude = magnitude(right_color_sensor.get_rgb_intensity())
+        right_distance = right_distance_sensor.get_distance_cm()
+        forward_distance = forward_distance_sensor.get_distance_cm()
 
-        # if the right or left sensor detected the goal
-        # stop
+        # handle goal detected
+        if (
+            in_interval(left_color_magnitude, red_interval) or
+            in_interval(right_color_magnitude, red_interval)
+        ):
+            left_motor.stop()
+            right_motor.stop()
+            loop = False
 
-        # else-if wall ahead
-        # turn left
-        # heading += 90
+        # handle wall ahead
+        elif forward_distance_sensor <= WALL_DISTANCE:
+            # turn left
+            # heading += 90
+            pass
 
-        # else-if corner right
-        # if heading is a multiple of 360, move foraward
-        # else, turn right and heading -= 90
+        # handle right corner
+        elif exists_right_corner():
+            # if heading is 0, move foraward
+            # else, turn right and heading -= 90
+            pass
 
-        # else-if wall on right
-        # continue forward
+        # handle wall on right
+        elif right_distance <= WALL_DISTANCE:
+            # continue forward
+            pass
         
-        # else
-        # continue forward
+        else:
+            # continue forward
+            pass
 
-        pass
+
+def test_exists_right_corner():
+    while not hub.right_button.is_pressed():
+        if hub.left_button.is_pressed():
+            hub.speaker.beep(60, 0.5)
+            result = exists_right_corner()
+            lm.write(str(result))
+    
+    hub.speaker.beep(60, 0.5)
 
 '''
 main()
@@ -269,5 +347,8 @@ def main():
         line_follow()
         
 
-main()
+#main()
+
+#wall_follow()
+test_exists_right_corner()
 #test_rgbi_reading()
