@@ -215,13 +215,31 @@ def test_rgbi_reading():
 '''
 exists_right_corner()
 
+Returns True if a right corner is detected, and False if there is no corner.
+Additionally, False is returned if a wall is detected to the immediate right of
+the robot's initial position.
+
+--- Procedure ---
+Check if there is a wall to the right of the robot's initial position. If so,
+return False; otherwise, continue to the next step.
+
+Move forward enough distance so the bot does not hit the wall when it rotates.
+
+Rotate 90 degrees to the right.
+
+Move forward enough distance so that it, if another wall exists,
+it can be detected.
+
+Check for a wall on the right. If a wall exists return True. If a wall doesn't
+exists, return the robot to its initial position and return False.
+
 Jeremy Juckett,
 '''
 def exists_right_corner():
     right_distance = right_distance_sensor.get_distance_cm()
 
     # if there is a wall to the immediate right, then there is no corner
-    if not right_distance is None and right_distance <= WALL_DISTANCE:
+    if right_distance and right_distance <= WALL_DISTANCE:
         return False
     
     # move ahead a bit to avoid rotating into a wall
@@ -245,7 +263,7 @@ def exists_right_corner():
 
     # scan for a wall on the right, returning True if a wall exists
     right_distance = right_distance_sensor.get_distance_cm()
-    if not right_distance is None and right_distance <= WALL_DISTANCE:
+    if right_distance and right_distance <= WALL_DISTANCE:
         return True
     
     # undo the previous motions if there is no wall, return False
@@ -268,6 +286,10 @@ def exists_right_corner():
 '''
 wall_follow()
 
+This method performs wall following by implementing the Pledge algorithm.
+While following a wall, the bot should maintain a distance of 8 cm from the
+wall to ensure that it does not deviate.
+
 Jeremy Juckett,
 '''
 def wall_follow():
@@ -289,7 +311,7 @@ def wall_follow():
             loop = False
 
         # handle wall ahead
-        elif forward_distance_sensor <= WALL_DISTANCE:
+        elif forward_distance and forward_distance <= WALL_DISTANCE:
             # turn left
             # heading += 90
             pass
@@ -301,8 +323,8 @@ def wall_follow():
             pass
 
         # handle wall on right
-        elif right_distance <= WALL_DISTANCE:
-            # continue forward
+        elif right_distance and right_distance <= WALL_DISTANCE:
+            # continue forward, maintaining a distance of 8 cm from wall
             pass
         
         else:
