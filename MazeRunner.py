@@ -261,15 +261,14 @@ exists, return the robot to its initial position and return False.
 Jeremy Juckett,
 '''
 def exists_right_corner():
-    right_distance = right_distance_sensor.get_distance_cm()
-
     # if there is a wall to the immediate right, then there is no corner
-    if detect_right_wall():
+    right_distance = right_distance_sensor.get_distance_cm()
+    if right_distance and right_distance <= RIGHT_WALL_DETECT_DISTANCE:
         return False
     
     # move ahead a bit to avoid rotating into a wall
-    left_motor.start(-30)
-    right_motor.start(30)
+    left_motor.start(-50)
+    right_motor.start(50)
     wait_for_seconds(0.5)
     left_motor.stop()
     right_motor.stop()
@@ -282,28 +281,29 @@ def exists_right_corner():
     wait_for_seconds(0.5)
 
     # move a head a bit
-    left_motor.start(-30)
-    right_motor.start(30)
+    left_motor.start(-50)
+    right_motor.start(50)
     wait_for_seconds(0.5)
     left_motor.stop()
     right_motor.stop()
     wait_for_seconds(0.5)
 
     # scan for a wall on the right, returning True if a wall exists
-    if detect_right_wall():
+    right_distance = right_distance_sensor.get_distance_cm()
+    if right_distance and right_distance <= RIGHT_WALL_DETECT_DISTANCE:
         return True
     
     # undo the previous motions if there is no wall, return False
-    left_motor.start(30)
-    right_motor.start(-30)
+    left_motor.start(50)
+    right_motor.start(-50)
     wait_for_seconds(0.5)
     left_motor.stop()
     right_motor.stop()
 
     mp.move_tank(amount=(pi * WHEEL_RADIUS), unit='cm', left_speed=-50, right_speed=50)
 
-    left_motor.start(30)
-    right_motor.start(-30)
+    left_motor.start(50)
+    right_motor.start(-50)
     wait_for_seconds(0.5)
     left_motor.stop()
     right_motor.stop()
@@ -320,7 +320,6 @@ wall to ensure that it does not deviate.
 Jeremy Juckett,
 '''
 def wall_follow():
-    heading = None
     loop = True
     while loop:
         left_color_magnitude = magnitude(left_color_sensor.get_rgb_intensity())
@@ -343,17 +342,17 @@ def wall_follow():
         # handle wall ahead
         if forward_distance and forward_distance <= FORWARD_WALL_DETECT_DISTANCE:
             mp.move_tank(amount=(pi * WHEEL_RADIUS), unit='cm', left_speed=-50, right_speed=50)
-            #heading = heading + 90
+            heading = heading + 90
 
         # handle wall on right
         elif right_distance and right_distance <= RIGHT_WALL_DETECT_DISTANCE:
             # continue forward, maintaining a distance of 8 cm from wall
             distance_from_wall = right_distance_sensor.get_distance_cm()
-            if distance_from_wall > 8:
+            if distance_from_wall and distance_from_wall > 8:
                 # turn towards the wall
                 left_motor.start()
                 right_motor.start(0)
-            elif distance_from_wall < 8:
+            elif distance_from_wall and distance_from_wall < 8:
                 # turn away from the wall
                 left_motor.start(0)
                 right_motor.start()
@@ -412,6 +411,6 @@ def main():
 
 #main()
 
-wall_follow()
-#test_exists_right_corner()
+#wall_follow()
+test_exists_right_corner()
 #test_rgbi_reading()
