@@ -214,30 +214,6 @@ def test_rgbi_reading():
     hub.speaker.beep(60, 0.5)
 
 '''
-detect_forward_wall()
-
-Returns True if a wall is detected WALL_DETECT_DISTANCE cm ahead of the robot,
-and False otherwise.
-
-Jeremy Juckett,
-'''
-def detect_forward_wall():
-    foward_distance = forward_distance_sensor.get_distance_cm()
-    return foward_distance and foward_distance <= FORWARD_WALL_DETECT_DISTANCE
-
-'''
-detect_right_wall()
-
-Returns True if a wall is detected WALL_DETECT_DISTANCE cm to the right of the
-robot, and False otherwise.
-
-Jeremy Juckett,
-'''
-def detect_right_wall():
-    right_distance = forward_distance_sensor.get_distance_cm()
-    return right_distance and right_distance <= RIGHT_WALL_DETECT_DISTANCE
-
-'''
 corner_detection()
 
 Move forward enough distance so the bot does not hit the wall when it rotates.
@@ -315,6 +291,55 @@ def corner_detection():
     return 2
 
 '''
+check_goal()
+
+Return True if the either of the color sensors detect RED;
+otherwise, return False.
+
+Jeremy Juckett,
+'''
+def check_goal():
+    left_color_magnitude = magnitude(left_color_sensor.get_rgb_intensity())
+    right_color_magnitude = magnitude(right_color_sensor.get_rgb_intensity())
+    
+    return (in_interval(left_color_magnitude, red_interval) or
+        in_interval(right_color_magnitude, red_interval))
+
+'''
+check_wall()
+
+Return True if a wall is detected to the right or ahead of the robot; otherwise,
+return False
+
+Jeremy Juckett,
+'''
+def check_wall():
+    right_distance = right_distance_sensor.get_distance_cm()
+    forward_distance = forward_distance_sensor.get_distance_cm()
+
+    return ((right_distance and right_distance <= RIGHT_WALL_DETECT_DISTANCE) or
+        (forward_distance and forward_distance <= FORWARD_WALL_DETECT_DISTANCE))
+
+'''
+check_line()
+
+Return True if a line is detected to the right or left of the robot; otherwise,
+return False.
+
+Jeremy Juckett,
+'''
+def check_line():
+    left_color_magnitude = magnitude(left_color_sensor.get_rgb_intensity())
+    right_color_magnitude = magnitude(right_color_sensor.get_rgb_intensity())
+
+    # check both sensors against black, yellow, and green intervals
+    return (
+        (in_interval(left_color_magnitude, black_interval)) or (in_interval(right_color_magnitude, black_interval)) or
+        (in_interval(left_color_magnitude, yellow_interval)) or (in_interval(right_color_magnitude, yellow_interval)) or
+        (in_interval(left_color_magnitude, green_interval)) or (in_interval(right_color_magnitude, green_interval))
+    )
+
+'''
 wall_follow()
 
 This method performs wall following by implementing the Pledge algorithm.
@@ -326,22 +351,8 @@ Jeremy Juckett,
 def wall_follow():
     loop = True
     while loop:
-        left_color_magnitude = magnitude(left_color_sensor.get_rgb_intensity())
-        right_color_magnitude = magnitude(right_color_sensor.get_rgb_intensity())
         right_distance = right_distance_sensor.get_distance_cm()
-        forward_distance = forward_distance_sensor.get_distance_cm()
-
-        # handle goal detected
-        '''
-        if (
-            in_interval(left_color_magnitude, red_interval) or
-            in_interval(right_color_magnitude, red_interval)
-        ):
-            left_motor.stop()
-            right_motor.stop()
-            hub.speaker.beep(60, 0.5)
-            loop = False
-        '''
+        forward_distance = forward_distance_sensor.get_distance_cm()        
 
         # handle wall ahead
         if forward_distance and forward_distance <= FORWARD_WALL_DETECT_DISTANCE:
@@ -394,27 +405,39 @@ Iteratively, the bot will run the line_follow() method. If there are no lines
 to follow, control is simply returned back to main().
 
 ...
+main()
 
-If no lines or walls are detected, the robot will drive in the known direction
-of the end goal.
+The robot will follow walls and lines until the goal is detected.
 
 Jeremy Juckett, 
 '''
 def main():
     goal = False
     while not goal:
-        # drive in direction of goal
-        left_motor.start()
-        right_motor.start()
+        goal = check_goal()
+        if goal:
+            left_motor.stop()
+            right_motor.stop()
+            hub.speaker.beep(60, 0.5)
+        
+        else:
+            # drive in direction of goal
+            left_motor.start()
+            right_motor.start()
 
-        # check for wall
+            # check for wall
+            if check_wall():
+                # run wall follow algorithm
+                pass
 
-        # line follow
-        line_follow()
+            # check for line
+            if check_line():
+                # run line follow algorithm
+                pass
         
 
 #main()
 
 #wall_follow()
-test_corner_detection()
+#test_corner_detection()
 #test_rgbi_reading()
