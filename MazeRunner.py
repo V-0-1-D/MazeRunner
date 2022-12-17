@@ -238,77 +238,81 @@ def detect_right_wall():
     return right_distance and right_distance <= RIGHT_WALL_DETECT_DISTANCE
 
 '''
-exists_right_corner()
-
-Returns True if a right corner is detected, and False if there is no corner.
-Additionally, False is returned if a wall is detected to the immediate right of
-the robot's initial position.
-
---- Procedure ---
-Check if there is a wall to the right of the robot's initial position. If so,
-return False; otherwise, continue to the next step.
+corner_detection()
 
 Move forward enough distance so the bot does not hit the wall when it rotates.
 
-Rotate 90 degrees to the right.
+Rotate -90 degrees (to the right).
 
 Move forward enough distance so that it, if another wall exists,
 it can be detected.
 
-Check for a wall on the right. If a wall exists return True. If a wall doesn't
-exists, return the robot to its initial position and return False.
+Check for a wall in front and to the right of the robot. This method will return
+the following integer values based on the given conditions:
+
+    0 - No wall in front, no wall to the right
+    1 - Wall to the right (wall to the front does not matter)
+    2 - Wall in front, no wall to the right
+
+When the case is 0, the robot will return to its initial position by undoing its
+previous motions.
 
 Jeremy Juckett,
 '''
-def exists_right_corner():
-    # if there is a wall to the immediate right, then there is no corner
-    right_distance = right_distance_sensor.get_distance_cm()
-    if right_distance and right_distance <= RIGHT_WALL_DETECT_DISTANCE:
-        return False
-    
-    # move ahead a bit to avoid rotating into a wall
+def corner_detection():   
+    # move ahead a bit to avoid rotating into the wall
     left_motor.start(-50)
     right_motor.start(50)
-    wait_for_seconds(0.5)
+    wait_for_seconds(0.75)
     left_motor.stop()
     right_motor.stop()
-
-    # check for wall ahead after moving
     
-
     # rotate -90 degrees
-    mp.move_tank(amount=(pi * WHEEL_RADIUS), unit='cm', left_speed=50, right_speed=-50)
+    # the angle (pi) may need to be adjusted
+    mp.move_tank(amount=((pi / 0.85714) * WHEEL_RADIUS), unit='cm', left_speed=50, right_speed=-50)
     wait_for_seconds(0.5)
 
     # move a head a bit
     left_motor.start(-50)
     right_motor.start(50)
-    wait_for_seconds(0.5)
+    wait_for_seconds(0.75)
     left_motor.stop()
     right_motor.stop()
     wait_for_seconds(0.5)
 
-    # scan for a wall on the right, returning True if a wall exists
+     # handle wall on right
     right_distance = right_distance_sensor.get_distance_cm()
     if right_distance and right_distance <= RIGHT_WALL_DETECT_DISTANCE:
-        return True
-    
-    # undo the previous motions if there is no wall, return False
-    left_motor.start(50)
-    right_motor.start(-50)
-    wait_for_seconds(0.5)
-    left_motor.stop()
-    right_motor.stop()
+        return 1
 
-    mp.move_tank(amount=(pi * WHEEL_RADIUS), unit='cm', left_speed=-50, right_speed=50)
+    # handle no front wall and no right wall
+    forward_distance = forward_distance_sensor.get_distance_cm()
+    if (
+        (not forward_distance or forward_distance > FORWARD_WALL_DETECT_DISTANCE + 20) and
+        (not right_distance or right_distance > RIGHT_WALL_DETECT_DISTANCE)
+    ):
+        # undo the previous motions
+        left_motor.start(50)
+        right_motor.start(-50)
+        wait_for_seconds(0.75)
+        left_motor.stop()
+        right_motor.stop()
 
-    left_motor.start(50)
-    right_motor.start(-50)
-    wait_for_seconds(0.5)
-    left_motor.stop()
-    right_motor.stop()
+        # rotate +90 degrees
+        # the angle (pi) may need to be adjusted
+        mp.move_tank(amount=((pi / 0.85714) * WHEEL_RADIUS), unit='cm', left_speed=-50, right_speed=50)
+        wait_for_seconds(0.5)
 
-    return False
+        left_motor.start(50)
+        right_motor.start(-50)
+        wait_for_seconds(0.75)
+        left_motor.stop()
+        right_motor.stop()
+
+        return 0
+
+    # handle wall in front, no wall on right
+    return 2
 
 '''
 wall_follow()
@@ -372,11 +376,11 @@ def wall_follow():
         '''
 
 
-def test_exists_right_corner():
+def test_corner_detection():
     while not hub.right_button.is_pressed():
         if hub.left_button.is_pressed():
             hub.speaker.beep(60, 0.5)
-            result = exists_right_corner()
+            result = corner_detection()
             lm.write(str(result))
     
     hub.speaker.beep(60, 0.5)
@@ -412,5 +416,5 @@ def main():
 #main()
 
 #wall_follow()
-test_exists_right_corner()
+test_corner_detection()
 #test_rgbi_reading()
