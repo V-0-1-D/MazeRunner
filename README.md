@@ -15,5 +15,5 @@
 - Adding changes: git add filenames...
 - Committing changes: git commit
 - Pushing committed changes: git push
-- Merging: git merge branchname
+- Merging: git merge branchna
  
